@@ -38,9 +38,9 @@ db = SQLDatabase.from_uri("postgresql://sa:1@192.168.0.20:11032/Version.1")
 
 # 프롬프트 템플릿 생성
 prompt = ChatPromptTemplate.from_template(
-"""
-{query}가 제품명인데, 이 제품의 제품명(product_name), 회사명(company_name), 영향평가방법(impact_methodology)을 볼 수 있는 쿼리문을 작성해줘
-"""
+    """
+    {query}가 제품명인데, 오직 이 제품에 대한 제품명, 회사(company)에 대한 모든 정보, 전화번호 , 영향평가(impact_assessment)만 볼 수 있는 쿼리문을 작성해줘
+    """
 )
 
 # 템플릿을 문자열로 변환
@@ -88,7 +88,7 @@ prompt = ChatPromptTemplate.from_template(
 """
 {b}
 
-이 정보를 이용해서 고객명과 회사명을 분류하고, 결과를 기반해서 아래 모든 문장 괄호의 단어를 대체해서 결과를 반환해줘
+이 정보를 이용해서 제품, 회사, 담당자 정보를 분류하고, 결과를 기반해서 아래 모든 문장 괄호의 단어를 대체해서 결과를 반환해줘
 
 1. 개요
 1.1 전과정평가 목적
@@ -111,6 +111,14 @@ prompt = ChatPromptTemplate.from_template(
 
 1.4 적용 표준
 [제품명] 전과정평가는 [영향평가방법]에 따라 수행되었다.
+
+1.5 연락 정보
+
+회사 : [회사명]
+대표자 : [대표자명]
+소재지 : [위치]
+이메일 : [이메일]
+
 """)
 
 # LLM 모델 로드 및 처리

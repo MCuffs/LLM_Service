@@ -23,7 +23,7 @@ db = SQLDatabase.from_uri("postgresql://sa:1@192.168.0.20:11032/Version.1")
 # 프롬프트 템플릿 생성
 prompt = ChatPromptTemplate.from_template(
     """
-    {query}가 제품명인데, 이 제품의 제품명(product_name), 회사명(company_name), 영향평가방법(impact_methodology)을 볼 수 있는 쿼리문을 작성해줘
+    {query}가 제품명인데, 이 제품의 제품 정보, 회사 정보, 영향평가 정보를 볼 수 있는 쿼리문을 작성해줘
     """
 )
 

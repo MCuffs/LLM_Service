@@ -19,12 +19,12 @@ llm = Ollama(model="ollama-bllossom:latest")
 # SQL 데이터베이스 연결
 db = SQLDatabase.from_uri("postgresql://sa:1@192.168.0.20:11032/Version.1")
 
-# 프롬프트 템플릿 생성
 prompt = ChatPromptTemplate.from_template(
-"""
-{query}의 제품명, 회사명, impact_methodology에 대한 쿼리문을 작성해줘
-"""
+    """
+    {query}가 제품명인데, 오직 이 제품에 대한 제품명, 회사에 대한 모든 정보, 전화번호 , 영향평가(impact_assessment)만 볼 수 있는 쿼리문을 작성해줘
+    """
 )
+
 
 # 템플릿을 문자열로 변환
 formatted_prompt = prompt.format(query=input_value)

@@ -1,3 +1,8 @@
+######
+######  임베딩 코드
+######
+
+
 import json
 import faiss
 import numpy as np

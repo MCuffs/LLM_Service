@@ -10,13 +10,13 @@ from langchain_community.llms import Ollama
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import create_engine, text
 from langchain.chains import RetrievalQA
+from langchain.callbacks import get_openai_callback
 import os
 
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 os.environ["LANGCHAIN_PROJECT"] = "newnew"
 os.environ["LANGCHAIN_API_KEY"] = "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"
-
 
 # Step 1: Initialize the LLM (Ollama model)
 llm = Ollama(model="llama3.1:latest")
@@ -93,7 +93,8 @@ retriever = faiss_vectorstore.as_retriever()
 retrieval_qa = RetrievalQA.from_chain_type(
     llm=llm,
     retriever=retriever,
-    chain_type="stuff"
+    chain_type="stuff",
+    return_source_documents=True  # Ensure we get source documents back
 )
 
 # Step 10: Streamlit input for query
@@ -105,19 +106,28 @@ prompt_template = """
 1. 레포트 요약이 아닌 레포트 전체를 작성해야한다.
 2. 무조건 한국어로 말해야한다.
 3. 주어진 정보를 사용해야한다.
+4. 개요, 전과정평가 수행 범위, 전과정 목록 분석, 전과정 영향평가, 전과정 해석의 목차에 맞게 작성해야한다
 
 Question: {query}
 
 Answer:
 """
 
+# Step 11: Streamlit element for streaming
+output_placeholder = st.empty()
+
 # Run the query when the user hits the 'Run' button
 if st.button('Run Query'):
     with st.spinner('Running query...'):
-        # Step 11: Customize the input with the prompt
+        # Step 12: Customize the input with the prompt
         prompt = prompt_template.format(query=query_text)
 
-        # Step 12: Run the query and display the response
-        response = retrieval_qa.run(prompt)
+        # Step 13: Run the query
+        response = retrieval_qa(prompt)  # Use __call__ instead of run()
+
+        # Step 14: Display result and sources separately
         st.success("Query completed!")
-        st.write(response)
+        st.write(response['result'])  # Display the result part of the response
+        st.write("Source documents:")
+        for doc in response['source_documents']:
+            st.write(doc.page_content)

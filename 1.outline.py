@@ -7,6 +7,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.llms import HuggingFaceHub
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from langchain_teddynote.messages import stream_response
+from sqlalchemy import create_engine, inspect
+from database import schema_info
+
+
 import re
 
 def clean_query(query):
@@ -27,11 +31,8 @@ input_value = "Brake Disc"  # 제품명을 입력
 
 
 
-
-
-
 # Ollama 모델 로드
-llm = Ollama(model="ollama-bllossom:latest")
+llm = Ollama(model="llama3.1:latest")
 
 # SQL 데이터베이스 연결
 db = SQLDatabase.from_uri("postgresql://sa:1@192.168.0.20:11032/Version.1")
@@ -39,12 +40,15 @@ db = SQLDatabase.from_uri("postgresql://sa:1@192.168.0.20:11032/Version.1")
 # 프롬프트 템플릿 생성
 prompt = ChatPromptTemplate.from_template(
     """
-    {query}가 제품명인데, 오직 이 제품에 대한 제품명, 회사(company)에 대한 모든 정보, 전화번호 , 영향평가(impact_assessment)만 볼 수 있는 쿼리문을 작성해줘
+    이 데이터베이스 스키마 정보는 다음과 같습니다:
+    {schema_info}
+
+    '{query}'라는 제품명에 대한 product name, company name, impact_assessment를 보여주는 SQL 쿼리를 작성해주세요.
     """
 )
 
 # 템플릿을 문자열로 변환
-formatted_prompt = prompt.format(query=input_value)
+formatted_prompt = prompt.format(query=input_value, schema_info={schema_info})
 
 # LLM과 SQL 데이터베이스 체인 생성
 chain = create_sql_query_chain(llm, db, k=10) | StrOutputParser()
@@ -53,6 +57,8 @@ chain = create_sql_query_chain(llm, db, k=10) | StrOutputParser()
 answer = chain.invoke({"question": formatted_prompt})
 
 result = re.search(r"(SELECT.*?;)", answer, re.DOTALL)
+
+print(result)
 
 aa = result.group(1)
 

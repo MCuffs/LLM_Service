@@ -1,130 +1,123 @@
+import faiss
+import numpy as np
+import ast
 import streamlit as st
-from langchain.chains import create_sql_query_chain
-from langchain_community.utilities import SQLDatabase
-from langchain.schema import StrOutputParser
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.docstore.in_memory import InMemoryDocstore
+from langchain.schema import Document
 from langchain_community.llms import Ollama
+from sentence_transformers import SentenceTransformer
 from sqlalchemy import create_engine, text
-from langchain_core.prompts import ChatPromptTemplate
-import re
+from langchain.chains import RetrievalQA
+import os
 
-# Streamlit 제목 및 설명
-st.title("LLM SQL Query Generator and LCA Report Creator")
-st.write("This app generates SQL queries using an LLM and creates an LCA report based on database results.")
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+os.environ["LANGCHAIN_PROJECT"] = "newnew"
+os.environ["LANGCHAIN_API_KEY"] = "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"
 
-# 사용자 입력 받기
-input_value = st.text_input("Enter the product name:", "Brake Disc")
 
-# Ollama 모델 로드
-llm = Ollama(model="ollama-bllossom:latest")
+# Step 1: Initialize the LLM (Ollama model)
+llm = Ollama(model="llama3.1:latest")
 
-# SQL 데이터베이스 연결
-db = SQLDatabase.from_uri("postgresql://sa:1@192.168.0.20:11032/Version.1")
+# Step 2: Initialize the sentence transformer model for embeddings
+embedding_model = SentenceTransformer('snunlp/KR-SBERT-V40K-klueNLI-augSTS')
 
-# 프롬프트 템플릿 생성
-prompt = ChatPromptTemplate.from_template(
-    """
-    {query}가 제품명인데, 이 제품의 제품 정보, 회사 정보, 영향평가 정보를 볼 수 있는 쿼리문을 작성해줘
-    """
+# Streamlit title
+st.title("LCA Document Retrieval with LangChain")
+
+# Step 3: SQL Database connection and data retrieval
+db_url = "postgresql://sa:1@192.168.0.20:11032/Version.1"
+engine = create_engine(db_url)
+
+# Step 4: Fetch embeddings and data from the database
+query_sql = "SELECT toc_id, section_title, subsection_title, body, lca_toc_embeddings FROM lca_toc WHERE lca_toc_embeddings IS NOT NULL"
+with engine.connect() as connection:
+    result = connection.execute(text(query_sql))
+    sql_data = [dict(zip(result.keys(), row)) for row in result]
+
+# Step 5: Parse the embeddings from string to list
+embeddings = []
+toc_ids = []
+docs = []
+for row in sql_data:
+    toc_id = row['toc_id']
+    section_title = row['section_title']
+    subsection_title = row['subsection_title']
+    body = row['body']
+    embedding_str = row['lca_toc_embeddings']
+
+    # Convert string to list of floats
+    try:
+        embedding = ast.literal_eval(embedding_str.replace('{', '[').replace('}', ']'))
+        embeddings.append(embedding)
+        toc_ids.append(toc_id)
+        # Create Document objects for storage
+        doc_content = f"{section_title} {subsection_title}: {body}"
+        docs.append(Document(page_content=doc_content, metadata={"toc_id": toc_id}))
+    except ValueError as e:
+        st.error(f"Error parsing embedding for toc_id {toc_id}: {e}")
+        continue
+
+# Convert embeddings to numpy array
+embeddings = np.array(embeddings, dtype=np.float32)
+
+# Step 6: Build FAISS index
+embedding_dimension = embeddings.shape[1]  # Dimension of your embeddings
+index = faiss.IndexFlatL2(embedding_dimension)  # L2 distance for similarity search
+index.add(embeddings)  # Add embeddings to the index
+
+# Step 7: Prepare the FAISS object in LangChain
+# Use InMemoryDocstore to store the documents
+docstore = InMemoryDocstore({str(i): docs[i] for i in range(len(docs))})
+
+# Create a mapping between FAISS index and docstore
+index_to_docstore_id = {i: str(i) for i in range(len(docs))}
+
+# Create a HuggingFaceEmbeddings object for embedding_function
+embedding_function = HuggingFaceEmbeddings(model_name="snunlp/KR-SBERT-V40K-klueNLI-augSTS")
+
+# Initialize FAISS vectorstore in LangChain with embedding_function
+faiss_vectorstore = FAISS(
+    index=index,
+    docstore=docstore,
+    index_to_docstore_id=index_to_docstore_id,
+    embedding_function=embedding_function
 )
 
-# 템플릿을 문자열로 변환
-formatted_prompt = prompt.format(query=input_value)
+# Step 8: Create a retriever
+retriever = faiss_vectorstore.as_retriever()
 
-# LLM과 SQL 데이터베이스 체인 생성
-chain = create_sql_query_chain(llm, db, k=10) | StrOutputParser()
+# Step 9: Define the LangChain RetrievalQA chain
+retrieval_qa = RetrievalQA.from_chain_type(
+    llm=llm,
+    retriever=retriever,
+    chain_type="stuff"
+)
 
-# SQL 쿼리 생성 및 실행
-if st.button("Generate SQL Query"):
-    try:
-        answer = chain.invoke({"question": formatted_prompt})
+# Step 10: Streamlit input for query
+query_text = st.text_input("Enter your query:", value=" ")
 
-        # 정규 표현식을 이용해 쿼리 추출
-        result = re.search(r"(SELECT.*?;)", answer, re.DOTALL)
-        if result:
-            aa = result.group(1)
-            st.session_state['sql_query'] = aa  # SQL 쿼리를 session_state에 저장
-            st.write("Generated SQL Query:", aa)
-        else:
-            st.error("SQL query could not be extracted.")
-    except Exception as e:
-        st.error(f"Error during SQL generation: {e}")
+# Define your custom prompt
+prompt_template = """
+너는 이제부터 전과정평가(LCA) 레포트 작성 전문가야. 다음 규칙을 따라서 레포트를 작성해줘
+1. 레포트 요약이 아닌 레포트 전체를 작성해야한다.
+2. 무조건 한국어로 말해야한다.
+3. 주어진 정보를 사용해야한다.
 
-# SQL 쿼리 실행 및 결과 출력
-if st.button("Run SQL Query") and 'sql_query' in st.session_state:
-    db_url = "postgresql://sa:1@192.168.0.20:11032/Version.1"
-    engine = create_engine(db_url)
+Question: {query}
 
-    try:
-        with engine.connect() as connection:
-            sql_query = st.session_state['sql_query']  # session_state에서 쿼리를 가져옴
-            result = connection.execute(text(sql_query))
-            columns = result.keys()
+Answer:
+"""
 
-            st.write("Query Result:")
+# Run the query when the user hits the 'Run' button
+if st.button('Run Query'):
+    with st.spinner('Running query...'):
+        # Step 11: Customize the input with the prompt
+        prompt = prompt_template.format(query=query_text)
 
-            # 각 열 및 행을 출력
-            rows = []
-            for row in result:
-                a = dict(zip(columns, row))
-                rows.append(a)
-
-            st.session_state['rows'] = rows  # rows를 session_state에 저장
-            st.write(rows)
-    except Exception as e:
-        st.error(f"Error during SQL execution: {e}")
-
-# LCA 보고서 생성을 위한 프롬프트
-if st.button("Generate Final LCA Report"):
-    if 'rows' in st.session_state:  # rows가 session_state에 저장되어 있는지 확인
-        try:
-            row_data = st.session_state['rows'][0]  # 첫 번째 결과 사용
-
-            # 프롬프트 템플릿
-            final_prompt = ChatPromptTemplate.from_template(
-                """
-                {b}
-
-                이 정보를 이용해서 제품명과 회사명과 영향평가방법을 추론하고, 아래 문장의 괄호에 대입해서 최종 수정된 문서를 작성해서 보여줘
-
-                1. 개요
-                
-                1.1 전과정평가 목적
-                
-                전과정평가는 [회사명]에서 생산하는 [제품명]의 전과정 (원료물질 취득, 가공, 운송, 제품의 생산 및 유통)에 걸친 에너지, 자원 및 온실가스 배출량을 조사하고 평가하여 고객과의 커뮤니케이션을 위한 탄소발자국 데이터를 확보하기 위한 것이다.
-
-                1.2 의도된 용도 및 사용자
-                
-                [제품명] 전과정평가의 용도 및 사용자는 다음과 같다.
-                - 고객([고객사명])의 요청에 따라 [제품명] 제품의 탄소발자국 커뮤니케이션 자료로 활용할 수 있다.
-                - [제품명] 제품의 탄소발자국 저감을 위한 기초 자료로 활용할 수 있다. - 독립적인 검증기관의 검증에 사용할 수 있다.
-
-                1.3 전과정평가 수행 방안
-                
-                고객과 커뮤니케이션을 위하여 전과정 단계를 세분화하여 결과를 도출하며, 전과정 단계는
-                다음과 같이 구분하였다.
-                - 원료물질 취득 및 생산 (Raw material production and supply)
-                - 원료물질 운송 (Raw material transportation)
-                - [제품명] 생산 (Manufacturing)
-                · 전기 사용 (Manufacturing energy – electricity)
-                · 기타 (Other manufacturing ancillary materials, waste processing, others)
-                영향평가 방법은 국제적으로 인정받고 있는 IPCC 2013 방법론을 적용한다. 해당 방법론을 적용하기 위해서는 이를 지원할 수 있는 데이터베이스의 적용이 필요하며, Ecoinvent 3.9.1 데이터베이스를 적용하였다.
-
-                1.4 적용 표준
-                
-                [제품명] 전과정평가는 [영향평가방법]에 따라 수행되었다.
-                """
-            )
-
-            # LLM 모델 로드 및 처리
-            llm2 = Ollama(model="llama3.1:latest")
-
-            # LLM에 프롬프트 및 SQL 결과를 넘겨 최종 문서 생성
-            chain = final_prompt | llm2 | StrOutputParser()
-            final_answer = chain.invoke({"b": row_data})
-
-            # Streamlit을 사용하여 최종 문서 출력
-            st.write(final_answer)
-        except Exception as e:
-            st.error(f"Error during final document generation: {e}")
-    else:
-        st.error("No rows data available. Please run the SQL query first.")
+        # Step 12: Run the query and display the response
+        response = retrieval_qa.run(prompt)
+        st.success("Query completed!")
+        st.write(response)

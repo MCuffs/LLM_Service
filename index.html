@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>LCA 보고서 및 일반 질문 어시스턴트</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 좌측: 채팅 인터페이스 -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <h1>LCA 보고서 및 일반 질문 어시스턴트</h1>
+            </div>
+            <div class="chat-window" id="chat-window">
+                <!-- 채팅 메시지가 표시될 영역 -->
+            </div>
+            <div class="chat-input">
+                <input type="text" id="user-input" placeholder="메시지를 입력하세요..." autocomplete="off">
+                <button id="send-button">전송</button>
+            </div>
+        </div>
+
+        <!-- 우측: 보고서 표시 섹션 -->
+        <div class="report-container">
+            <iframe id="report-iframe" src="" frameborder="0"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const chatWindow = document.getElementById('chat-window');
+        const reportIframe = document.getElementById('report-iframe');
+
+        function appendMessage(sender, message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', sender);
+            messageElement.innerHTML = `<p>${message}</p>`;
+            chatWindow.appendChild(messageElement);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function sendMessage(message) {
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.type === 'report') {
+                    appendMessage('bot', '전과정평가 보고서를 생성 중입니다...');
+                    // iframe의 src를 보고서 URL로 설정
+                    reportIframe.src = `/report/${data.report_id}`;
+                } else {
+                    appendMessage('bot', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (error.message) {
+                    appendMessage('bot', error.message);
+                } else {
+                    appendMessage('bot', '응답을 가져오는 중 오류가 발생했습니다.');
+                }
+            });
+        }
+
+        sendButton.addEventListener('click', () => {
+            const message = userInput.value.trim();
+            if (message === '') return;
+            appendMessage('user', message);
+            userInput.value = '';
+            sendMessage(message);
+        });
+
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const message = userInput.value.trim();
+                if (message === '') return;
+                appendMessage('user', message);
+                userInput.value = '';
+                sendMessage(message);
+            }
+        });
+    </script>
+</body>
+</html>

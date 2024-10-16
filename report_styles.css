@@ -1,0 +1,180 @@
+/* static/report_styles.css */
+
+body {
+    font-family: 'Noto Serif KR', serif;
+    background-color: #ffffff;
+    margin: 0;
+    padding: 0;
+    color: #333333;
+}
+
+.report-container {
+    width: 100%;
+    height: 100vh;
+    padding: 40px;
+    overflow-y: auto;
+    background-color: #fdfdfd;
+    box-sizing: border-box;
+}
+
+.cover-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 80vh;
+    text-align: center;
+}
+
+.cover-page h1 {
+    color: #2d4373;
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.cover-page p {
+    color: #555555;
+    font-size: 24px;
+    margin: 5px 0;
+}
+
+.report-header {
+    margin-bottom: 40px;
+}
+
+.report-header h2 {
+    color: #2d4373;
+    font-size: 32px;
+    margin-bottom: 20px;
+}
+
+.report-header ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.report-header ul li {
+    margin: 10px 0;
+    font-size: 18px;
+    position: relative;
+    padding-left: 25px;
+}
+
+.report-header ul li::before {
+    content: counter(li);
+    counter-increment: li;
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-weight: bold;
+}
+
+.report-content {
+    line-height: 1.8;
+}
+
+.report-content h2, .report-content h3 {
+    color: #2d4373;
+    margin-top: 30px;
+}
+
+.report-content h2 {
+    font-size: 28px;
+    border-bottom: 2px solid #2d4373;
+    padding-bottom: 5px;
+}
+
+.report-content h3 {
+    font-size: 24px;
+    margin-top: 20px;
+}
+
+.report-content p {
+    margin: 15px 0;
+}
+
+.report-content ul, .report-content ol {
+    margin: 15px 40px;
+}
+
+.report-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+}
+
+.report-content table, .report-content th, .report-content td {
+    border: 1px solid #cccccc;
+}
+
+.report-content th, .report-content td {
+    padding: 12px;
+    text-align: left;
+}
+
+.report-content th {
+    background-color: #f0f0f0;
+}
+
+.report-content blockquote {
+    border-left: 5px solid #2d4373;
+    padding-left: 15px;
+    color: #666666;
+    margin: 25px 0;
+    font-style: italic;
+}
+
+.report-content code {
+    background-color: #f5f5f5;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.report-content pre {
+    background-color: #f5f5f5;
+    padding: 15px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.report-content img {
+    max-width: 100%;
+    height: auto;
+    margin: 20px 0;
+}
+
+.report-footer {
+    text-align: center;
+    margin-top: 40px;
+    border-top: 1px solid #cccccc;
+    padding-top: 20px;
+}
+
+.report-footer p {
+    color: #777777;
+    font-size: 14px;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .report-header h2 {
+        font-size: 24px;
+    }
+
+    .report-content h2 {
+        font-size: 24px;
+    }
+
+    .report-content h3 {
+        font-size: 20px;
+    }
+
+    .cover-page h1 {
+        font-size: 36px;
+    }
+
+    .cover-page p {
+        font-size: 20px;
+    }
+}

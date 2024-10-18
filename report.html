@@ -2,57 +2,125 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>전과정평가 보고서</title>
+    <title>{{ product_name }} 전과정평가 보고서</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='report_styles.css') }}">
-    <!-- Google Fonts: Noto Serif KR 추가 -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap" rel="stylesheet">
-    <!-- Typed.js 라이브러리 추가 -->
     <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
+    <style>
+        /* Adjustments for a smaller, more elegant cover page */
+        .cover-page {
+            text-align: center;
+            padding: 15px;  /* Reduced padding */
+            margin-bottom: 15px;
+        }
+
+        .cover-page h1 {
+            font-size: 28px;  /* Reduced font size */
+            font-weight: 600;
+            color: #222222;
+            margin-bottom: 10px;
+        }
+
+        .cover-page p {
+            font-size: 16px;  /* Reduced font size */
+            color: #555555;
+            margin-bottom: 5px;
+        }
+
+        /* Typing animation styling */
+        .typed-cursor {
+            font-size: 18px;  /* Adjusted size for cursor */
+            opacity: 1;
+            animation: blink 0.7s infinite;  /* Blinking cursor */
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        /* Adjustments for a cleaner report layout */
+        .report-header {
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dddddd;
+        }
+
+        .report-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333333;
+        }
+
+        .report-header ul {
+            padding-left: 20px;
+            list-style-type: decimal;
+        }
+
+        .report-header ul li {
+            margin-bottom: 5px;
+            font-size: 16px;
+            color: #444444;
+        }
+
+        /* Content area where typing happens */
+        .report-content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #333333;
+        }
+    </style>
 </head>
 <body>
     <div class="report-container">
-        <!-- 커버 페이지 -->
+        <!-- Cover Page -->
         <div class="cover-page">
             <h1>전과정평가 보고서</h1>
-            <p>제품명: {{ product_name }}</p>
-            <p>작성일: {{ current_date }}</p>
+            <p><strong>제품명:</strong> {{ product_name }}</p>
+            <p><strong>작성일:</strong> {{ current_date }}</p>
         </div>
+
+        <!-- Table of Contents -->
         <div class="report-header">
             <h2>목차</h2>
             <ul>
-                <li>1. 서론</li>
-                <li>2. 방법론</li>
-                <li>3. 결과</li>
-                <li>4. 결론</li>
-                <li>5. 참고문헌</li>
+                {% for section in sections %}
+                    <li>{{ loop.index }}. {{ section }}</li>
+                {% endfor %}
             </ul>
         </div>
+
+        <!-- Report Content with Typing Animation -->
         <div class="report-content" id="report-content">
-            <!-- 타이핑 애니메이션을 표시할 요소 -->
-            <div id="typed-output"></div>
+            <div id="typed-output"></div> <!-- This is where the typing animation happens -->
         </div>
+
+        <!-- Hidden Full Report Content (for typing animation to reveal) -->
+        <div id="full-report" style="display: none;">
+            {{ report_content|safe }}
+        </div>
+
+        <!-- Footer -->
         <div class="report-footer">
             <p>© {{ current_date[:4] }} Your Company Name. All rights reserved.</p>
         </div>
     </div>
 
-    <!-- Typed.js 설정 -->
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            const reportContent = `{{ report_content|safe }}`;  // Flask에서 전달된 HTML 내용
+            const reportContent = document.getElementById('full-report').innerHTML;
 
-            // Typed.js는 HTML을 지원하도록 설정
+            // Initialize Typed.js for the typing animation
             const typed = new Typed('#typed-output', {
-                strings: [reportContent],
-                typeSpeed: 10,       // 타이핑 속도 (밀리초)
-                backSpeed: 0,        // 삭제 속도
-                showCursor: true,    // 커서 표시 여부
-                cursorChar: '|',
-                smartBackspace: false, // 똑똑한 백스페이스 사용 여부
-                // HTML을 파싱하여 올바르게 렌더링
-                html: true,
-                onComplete: (self) => {
-                    console.log('타이핑 완료');
+                strings: [reportContent],  // The content that will be typed out
+                typeSpeed: 10,  // Slower typing speed for realism
+                startDelay: 10,  // Delay before starting to type
+                showCursor: true,
+                cursorChar: '|',  // Display the cursor
+                onComplete: function() {
+                    // After typing completes, replace the content with the full HTML
+                    document.getElementById('report-content').innerHTML = reportContent;
                 }
             });
         });

@@ -5,17 +5,152 @@
     <title>LCA 보고서 및 일반 질문 어시스턴트</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;  /* Clean white background */
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Chat Interface: Make it minimal and cleaner */
+        .chat-container {
+            flex: 0.35;  /* Reduced width of chat for cleaner layout */
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);  /* Subtle shadow for clean depth */
+        }
+
+        .chat-header {
+            padding: 20px;
+            background-color: #1f2a44;  /* Muted, deep navy background for elegance */
+            color: #ffffff;
+            text-align: center;
+            font-family: 'Pretendard', sans-serif;  /* High-end serif font for elegance */
+            font-size: 12px;  /* Larger font size for emphasis */
+            font-weight: 700;  /* Bold for a premium look */
+            letter-spacing: 1.5px;  /* Slight letter spacing for sophistication */
+            text-transform: capitalize;  /* Capitalize each word for formality */
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);  /* More prominent shadow for depth */
+        }
+
+        .chat-window {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            text-align: right;
+        }
+
+        .message.bot {
+            text-align: left;
+        }
+
+        .message p {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 15px;
+        }
+
+        .message.user {
+            text-align: right;
+         margin-left: auto;  /* Push the user's messages to the right */
+        max-width: 75%;  /* Ensure the message doesn’t span the full width */
+        padding-right: 20px;  /* Add some extra padding for right alignment */
+        }
+
+
+        .message.bot p {
+            background-color: #eeeeee;  /* Subtle gray for bot messages */
+            color: #333333;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        .chat-input button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 20px;
+            background-color: #444444;
+            color: #ffffff;
+            cursor: pointer;
+        }
+
+        .chat-input button:hover {
+            background-color: #333333;
+        }
+
+        /* Report Section: Give more importance with wider area */
+        .report-container {
+            flex: 0.65;  /* Larger report display area */
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+        }
+
+        .report-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Responsive Design for smaller devices */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .chat-container, .report-container {
+                flex: none;
+                height: 50vh;
+            }
+
+            .report-container iframe {
+                height: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <!-- 좌측: 채팅 인터페이스 -->
+        <!-- Chat Interface -->
         <div class="chat-container">
             <div class="chat-header">
-                <h1>LCA 보고서 및 일반 질문 어시스턴트</h1>
+                <h1>LCA 어시스턴트</h1>
             </div>
             <div class="chat-window" id="chat-window">
-                <!-- 채팅 메시지가 표시될 영역 -->
+                <!-- Chat messages will be displayed here -->
             </div>
             <div class="chat-input">
                 <input type="text" id="user-input" placeholder="메시지를 입력하세요..." autocomplete="off">
@@ -23,7 +158,7 @@
             </div>
         </div>
 
-        <!-- 우측: 보고서 표시 섹션 -->
+        <!-- Report Display -->
         <div class="report-container">
             <iframe id="report-iframe" src="" frameborder="0"></iframe>
         </div>
@@ -60,19 +195,13 @@
             .then(data => {
                 if (data.type === 'report') {
                     appendMessage('bot', '전과정평가 보고서를 생성 중입니다...');
-                    // iframe의 src를 보고서 URL로 설정
                     reportIframe.src = `/report/${data.report_id}`;
                 } else {
                     appendMessage('bot', data.message);
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                if (error.message) {
-                    appendMessage('bot', error.message);
-                } else {
-                    appendMessage('bot', '응답을 가져오는 중 오류가 발생했습니다.');
-                }
+                appendMessage('bot', '응답을 가져오는 중 오류가 발생했습니다.');
             });
         }
 
